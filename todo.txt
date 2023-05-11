@@ -1,0 +1,1 @@
+Ships of length 1 don't need to ask for rotation.
