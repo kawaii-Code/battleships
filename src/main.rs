@@ -3,7 +3,7 @@ use std::{io, collections::HashMap};
 mod field;
 mod player;
 
-use player::{Player};
+use player::{Player, Victory};
 
 #[derive(Debug)]
 #[derive(Clone, Copy)]
@@ -44,13 +44,22 @@ fn input_rotation(message: &str) -> Result<Rotation, String> {
 
 fn to_index(letter: &str) -> Result<usize, String> {
     match letter.chars().next() {
-        Some(coordinate) => Ok(coordinate as usize - 'A' as usize),
+        Some(coordinate) => {
+            let ord = coordinate as usize;
+            if ord < 'A' as usize {
+                return Err("The y coordinate must be a letter!".to_string());
+            } else if ord > LAST_LETTER as usize {
+                return Err("The y coordinate was greater than possible: max is {LAST_LETTER}".to_string());
+            }
+
+            Ok(ord - 'A' as usize)
+        }
         None => Err("No y coordinate provided!".to_string()),
     }
 }
 
 fn input_ship() -> Result<Ship, String> {
-    let ship = input("Input a ship in format 'length:x:y': ");
+    let ship = input("Input a ship 'length:x:y': ");
     let mut ship_iter = ship.split(':');
 
     let length = match ship_iter.next() {
@@ -92,6 +101,7 @@ fn input_ship() -> Result<Ship, String> {
 
 const FIELD_SIZE: usize = 10;
 const SHIP_COUNT: u32 = 10;
+const LAST_LETTER: char = ('A' as usize + FIELD_SIZE) as u8 as char;
 
 fn main() {
     let mut player = Player::new(FIELD_SIZE);
@@ -101,6 +111,8 @@ fn main() {
     ships_to_place.insert(3, 2);
     ships_to_place.insert(2, 3);
     ships_to_place.insert(1, 4);
+
+    println!("Please input {SHIP_COUNT} ships in format 'length:x:y', e.g. '4:3:B': ");
 
     for _ in 0..SHIP_COUNT {
         loop {
@@ -139,13 +151,54 @@ fn main() {
         }
     }
 
-    let opponent = Player::new(FIELD_SIZE);
+    println!("Your ship placement!");
+    player.print();
 
-    player.shoot(&opponent, 0, 0);
-    player.shoot(&opponent, 1, 1);
-    player.shoot(&opponent, 1, 4);
-    player.shoot(&opponent, 8, 4);
-    player.shoot(&opponent, 9, 9);
+    let mut opponent = Player::new(FIELD_SIZE);
 
+    let opponent_ships = vec![
+        Ship { length: 4, x: 0,  y: 0,  rotation: Rotation::Vertical },
+        Ship { length: 3, x: 4,  y: 1,  rotation: Rotation::Horizontal },
+        Ship { length: 3, x: 9, y: 4,  rotation: Rotation::Vertical },
+        Ship { length: 2, x: 0,  y: 9,  rotation: Rotation::Horizontal },
+        Ship { length: 2, x: 4,  y: 3,  rotation: Rotation::Vertical },
+        Ship { length: 2, x: 7,  y: 9,  rotation: Rotation::Horizontal },
+        Ship { length: 1, x: 1,  y: 6,  rotation: Rotation::Horizontal },
+        Ship { length: 1, x: 3,  y: 6,  rotation: Rotation::Horizontal },
+        Ship { length: 1, x: 9, y:  0, rotation: Rotation::Horizontal },
+        Ship { length: 1, x: 6,  y: 5,  rotation: Rotation::Horizontal },
+    ];
+
+    for ship in opponent_ships {
+        opponent.place_ship(&ship);
+    }
+
+    loop {
+        let shot = input("Input a shot in format 'x:y'");
+        let mut shot = shot.split(':');
+        let x = shot.next().unwrap().parse::<usize>().unwrap() - 1;
+        let y = to_index(shot.next().unwrap()).unwrap();
+
+        match player.shoot(&mut opponent, x, y) {
+            Ok(victory) => {
+                match victory {
+                    Victory::Win => {
+                        println!("You won!!!");
+                        break;
+                    }
+                    Victory::NotWin => {
+                    }
+                }
+            }
+            Err(message) => {
+                eprintln!("{message}");
+                continue;
+            }
+        }
+
+        player.print();
+    }
+
+    println!("Final game state: ");
     player.print();
 }

@@ -1,6 +1,11 @@
 use crate::field::{PlayerField, CheckField, FieldCell, CheckedCell};
 use crate::Ship;
 
+pub enum Victory {
+    Win,
+    NotWin,
+}
+
 pub struct Player {
     player_field: PlayerField,
     checked_field: CheckField,
@@ -19,6 +24,17 @@ impl Player {
         }
     }
 
+    pub fn lost(&self) -> bool {
+        for x in 0..self.size {
+            for y in 0..self.size {
+                if self.player_field.is_ship_on(x as isize, y as isize) {
+                    return false;
+                }
+            }
+        }
+        true
+    }
+
     pub fn place_ship(&mut self, ship: &Ship) {
         self.player_field.place_ship(ship);
     }
@@ -27,11 +43,39 @@ impl Player {
         self.player_field.can_place(ship)
     }
 
-    pub fn shoot(&mut self, opponent: &Player, x: usize, y: usize) {
-        if true {
-            self.checked_field.mark(x, y, CheckedCell::Hit);
-        } else {
-            self.checked_field.mark(x, y, CheckedCell::Miss);
+    pub fn take_damage(&mut self, x: usize, y: usize) -> Result<CheckedCell, String> {
+        let shot_cell = self.player_field.at(x, y);
+        match shot_cell {
+            FieldCell::Ship => {
+                if self.player_field.will_ship_die_after_shot(x, y) {
+                    self.player_field.mark_dead(x, y);
+                    return Ok(CheckedCell::Kill);
+                }            
+
+                self.player_field.mark_hit(x, y);
+                Ok(CheckedCell::Hit)
+            }
+            FieldCell::EnemyMiss => Err("Already shot in this place".to_string()),
+            FieldCell::Hit => Err("Already shot in this place!".to_string()),
+            FieldCell::Dead => Err("Already shot in this place!".to_string()),
+            FieldCell::Empty => { 
+                self.player_field.mark_enemy_miss(x, y);
+                Ok(CheckedCell::Miss)
+            }
+        }
+    }
+
+    pub fn shoot(&mut self, opponent: &mut Player, x: usize, y: usize) -> Result<Victory, String> {
+        match opponent.take_damage(x, y) {
+            Ok(hit_result) => { 
+                self.checked_field.mark(x, y, hit_result);
+                if opponent.lost() {
+                    Ok(Victory::Win)
+                } else {
+                    Ok(Victory::NotWin)
+                }
+            },
+            Err(message) => Err(message),
         }
     }
 
@@ -55,6 +99,9 @@ impl Player {
                     .map(|cell| match cell {
                         FieldCell::Empty => "[ ]",
                         FieldCell::Ship => "[#]",
+                        FieldCell::EnemyMiss => "[*]",
+                        FieldCell::Hit => "[!]",
+                        FieldCell::Dead => "[X]",
                     })
                     .collect();
 

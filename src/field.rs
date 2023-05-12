@@ -5,7 +5,10 @@ use super::{Ship, Rotation};
 #[derive(PartialEq)]
 pub enum FieldCell {
     Empty,
-    Ship
+    Ship,
+    EnemyMiss,
+    Hit,
+    Dead,
 }
 
 #[derive(Debug)]
@@ -58,8 +61,40 @@ impl PlayerField {
         }
     }
 
+    pub fn will_ship_die_after_shot(&self, x: usize, y: usize) -> bool {
+        // TODO: I failed to write an algorithm here
+        false
+    }
+
+    pub fn mark_dead(&mut self, x: usize, y: usize) {
+        mark_dead_recursive(self, x as isize, y as isize);
+
+        fn mark_dead_recursive(me: &mut PlayerField, x: isize, y: isize) {
+            if !me.is_ship_on(x, y) {
+                return;
+            }
+
+            me.field[x as usize][y as usize] = FieldCell::Dead;
+            mark_dead_recursive(me, x - 1, y);
+            mark_dead_recursive(me, x + 1, y);
+            mark_dead_recursive(me, x, y + 1);
+            mark_dead_recursive(me, x, y - 1);
+        }
+    }
+
+    pub fn mark_hit(&mut self, x: usize, y: usize) {
+        self.field[x][y] = FieldCell::Hit;
+    }
+
+    pub fn mark_enemy_miss(&mut self, x: usize, y: usize) {
+        self.field[x][y] = FieldCell::EnemyMiss;
+    }
+
     pub fn at(&self, x: usize, y: usize) -> FieldCell {
-        assert!(x < self.size && y < self.size);
+        if self.is_out_of_bounds(x as isize, y as isize) {
+            return FieldCell::Empty;
+        }
+
         self.field[x][y]
     }
 
