@@ -47,7 +47,7 @@ impl Player {
         let shot_cell = self.player_field.at(x, y);
         match shot_cell {
             FieldCell::Ship => {
-                if self.player_field.will_ship_die_after_shot(x, y) {
+                if !self.player_field.will_ship_survive_after_shot(x, y) {
                     self.player_field.mark_dead(x, y);
                     return Ok(CheckedCell::Kill);
                 }            

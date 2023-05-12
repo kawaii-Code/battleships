@@ -37,12 +37,37 @@ impl CheckField {
     }
 
     pub fn mark(&mut self, x: usize, y: usize, marker: CheckedCell) {
-        self.field[x][y] = marker;
+        if marker == CheckedCell::Kill {
+            self.mark_kill(x, y);
+        } else {
+            self.field[x][y] = marker;
+        }
     }
 
     pub fn at(&self, x: usize, y: usize) -> CheckedCell {
         assert!(x < self.size && y < self.size);
         self.field[x][y]
+    }
+
+    fn mark_kill(&mut self, x: usize, y: usize) {
+        self.field[x][y] = CheckedCell::Hit;
+        mark_kill_recursive(self, x as isize, y as isize);
+
+        fn mark_kill_recursive(me: &mut CheckField, x: isize, y: isize) {
+            if x < 0 || y < 0 || x >= me.size as isize || y >= me.size as isize {
+                return;
+            }
+
+            let cell = me.at(x as usize, y as usize);
+
+            if cell == CheckedCell::Hit{
+                me.field[x as usize][y as usize] = CheckedCell::Kill;
+                mark_kill_recursive(me, x - 1, y);
+                mark_kill_recursive(me, x + 1, y);
+                mark_kill_recursive(me, x, y + 1);
+                mark_kill_recursive(me, x, y - 1);
+            }
+        }
     }
 }
 
@@ -61,24 +86,46 @@ impl PlayerField {
         }
     }
 
-    pub fn will_ship_die_after_shot(&self, x: usize, y: usize) -> bool {
-        // TODO: I failed to write an algorithm here
-        false
+    pub fn will_ship_survive_after_shot(&self, x: usize, y: usize) -> bool {
+        let x = x as isize;
+        let y = y as isize;
+
+        return walk(self, x, y, 1, 0) ||
+            walk(self, x, y, -1, 0) ||
+            walk(self, x, y, 0, 1) ||
+            walk(self, x, y, 0, -1);
+
+
+        fn walk(me: &PlayerField, x: isize, y: isize, xdir: isize, ydir: isize) -> bool {
+            if me.is_out_of_bounds(x + xdir, y + ydir) {
+                return false;
+            }
+
+            match me.at((x + xdir) as usize, (y + ydir) as usize) {
+                FieldCell::Ship => true,
+                FieldCell::Hit => walk(me, x + xdir, y + ydir, xdir, ydir),
+                _ => false,
+            }
+        }
     }
 
     pub fn mark_dead(&mut self, x: usize, y: usize) {
         mark_dead_recursive(self, x as isize, y as isize);
 
         fn mark_dead_recursive(me: &mut PlayerField, x: isize, y: isize) {
-            if !me.is_ship_on(x, y) {
+            if me.is_out_of_bounds(x, y) {
                 return;
             }
 
-            me.field[x as usize][y as usize] = FieldCell::Dead;
-            mark_dead_recursive(me, x - 1, y);
-            mark_dead_recursive(me, x + 1, y);
-            mark_dead_recursive(me, x, y + 1);
-            mark_dead_recursive(me, x, y - 1);
+            let cell = me.at(x as usize, y as usize);
+
+            if cell == FieldCell::Ship || cell == FieldCell::Hit {
+                me.field[x as usize][y as usize] = FieldCell::Dead;
+                mark_dead_recursive(me, x - 1, y);
+                mark_dead_recursive(me, x + 1, y);
+                mark_dead_recursive(me, x, y + 1);
+                mark_dead_recursive(me, x, y - 1);
+            }
         }
     }
 
