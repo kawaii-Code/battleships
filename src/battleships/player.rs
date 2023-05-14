@@ -1,5 +1,5 @@
-use crate::field::{PlayerField, CheckField, FieldCell, CheckedCell};
-use crate::Ship;
+use super::ship::{Ship};
+use super::field::{PlayerField, CheckField, FieldCell, CheckedCell};
 
 pub enum Victory {
     Win,
@@ -24,10 +24,10 @@ impl Player {
         }
     }
 
-    pub fn lost(&self) -> bool {
+    pub fn did_lose(&self) -> bool {
         for x in 0..self.size {
             for y in 0..self.size {
-                if self.player_field.is_ship_on(x as isize, y as isize) {
+                if self.player_field.is_ship_on(x, y) {
                     return false;
                 }
             }
@@ -69,7 +69,7 @@ impl Player {
         match opponent.take_damage(x, y) {
             Ok(hit_result) => { 
                 self.checked_field.mark(x, y, hit_result);
-                if opponent.lost() {
+                if opponent.did_lose() {
                     Ok(Victory::Win)
                 } else {
                     Ok(Victory::NotWin)

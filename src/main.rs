@@ -1,23 +1,10 @@
-use std::{io, collections::HashMap};
+mod battleships;
 
-mod field;
-mod player;
-
-use player::{Player, Victory};
-
-#[derive(Debug)]
-#[derive(Clone, Copy)]
-enum Rotation {
-    Horizontal,
-    Vertical
-}
-
-pub struct Ship {
-    length: usize,
-    x: usize,
-    y: usize,
-    rotation: Rotation,
-}
+use std::{io, collections::HashMap, str::FromStr};
+use battleships::{
+    player::{Player, Victory},
+    ship::{Ship, Rotation},
+};
 
 fn input(message: &str) -> String {
     println!("{message}");

@@ -1,4 +1,4 @@
-use super::{Ship, Rotation};
+use super::ship::{Ship, Rotation};
 
 #[derive(Debug)]
 #[derive(Clone, Copy)]
@@ -86,6 +86,16 @@ impl PlayerField {
         }
     }
 
+    #[inline]
+    pub fn at(&self, x: usize, y: usize) -> FieldCell {
+        self.field[x][y]
+    }
+
+    #[inline]
+    pub fn set(&mut self, x: usize, y: usize, value: FieldCell) {
+        self.field[x][y] = value;
+    }
+
     pub fn will_ship_survive_after_shot(&self, x: usize, y: usize) -> bool {
         let x = x as isize;
         let y = y as isize;
@@ -130,27 +140,15 @@ impl PlayerField {
     }
 
     pub fn mark_hit(&mut self, x: usize, y: usize) {
-        self.field[x][y] = FieldCell::Hit;
+        self.set(x, y, FieldCell::Hit);
     }
 
     pub fn mark_enemy_miss(&mut self, x: usize, y: usize) {
-        self.field[x][y] = FieldCell::EnemyMiss;
+        self.set(x, y, FieldCell::EnemyMiss);
     }
 
-    pub fn at(&self, x: usize, y: usize) -> FieldCell {
-        if self.is_out_of_bounds(x as isize, y as isize) {
-            return FieldCell::Empty;
-        }
-
-        self.field[x][y]
-    }
-
-    pub fn is_ship_on(&self, x: isize, y: isize) -> bool {
-        if self.is_out_of_bounds(x, y) {
-            return false;
-        }
-
-        self.field[x as usize][y as usize] == FieldCell::Ship
+    pub fn is_ship_on(&self, x: usize, y: usize) -> bool {
+        self.at(x, y) == FieldCell::Ship
     }
 
     pub fn place_ship(&mut self, ship: &Ship) -> bool {
@@ -186,14 +184,19 @@ impl PlayerField {
     }
 
     fn can_place_on(&self, x: usize, y: usize) -> bool {
-        if self.is_out_of_bounds(x as isize, y as isize) {
-            return false;
-        }
-
         for dy in -1..=1isize {
             for dx in -1..=1isize {
-                let checked_x = x as isize + dx;
-                let checked_y = y as isize + dy;
+                let checked_x = if dx == -1 { sub_one(x) } else if dx == 0 { Some(x) } else { add_one(x, self.size) };
+                let checked_y = if dy == -1 { sub_one(y) } else if dy == 0 { Some(y) } else { add_one(y, self.size) };
+
+                let checked_x = match checked_x {
+                    Some(value) => value,
+                    None => { continue; }
+                };
+                let checked_y = match checked_y {
+                    Some(value) => value,
+                    None => { continue; }
+                };
 
                 if self.is_ship_on(checked_x, checked_y) {
                     return false;
@@ -209,3 +212,11 @@ impl PlayerField {
         x < 0 || y < 0 || x >= size || y >= size
     }
 }
+
+fn sub_one(coordinate: usize) -> Option<usize> {
+    if coordinate == 0 { None } else { Some(coordinate - 1) }
+}
+fn add_one(coordinate: usize, bounds: usize) -> Option<usize> {
+    if coordinate == bounds - 1 { None } else { Some(coordinate + 1) }
+}
+

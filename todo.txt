@@ -1,2 +1,1 @@
 Ships of length 1 don't need to ask for rotation.
-Extract field, player, etc. to a big module 'battleships'. For style.
