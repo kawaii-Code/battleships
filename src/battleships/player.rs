@@ -1,5 +1,5 @@
 use super::ship::{Ship};
-use super::field::{PlayerField, CheckField, FieldCell, CheckedCell};
+use super::field::{PlayerField, CheckField, FieldCell, CheckedCell, ShipPlacementError};
 
 pub enum Victory {
     Win,
@@ -39,7 +39,7 @@ impl Player {
         self.player_field.place_ship(ship);
     }
 
-    pub fn can_place(&self, ship: &Ship) -> bool {
+    pub fn can_place(&self, ship: &Ship) -> Result<(), ShipPlacementError> {
         self.player_field.can_place(ship)
     }
 

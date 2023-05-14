@@ -29,19 +29,19 @@ where T: FromStr,
     }
 }
 
-pub fn read_while<T, P>(message: &str, predicate: P) -> T
+pub fn read_while<T, F, FErr>(message: &str, condition: F) -> T
 where T: FromStr,
       T::Err: Display,
-      P: Fn(&T) -> bool,
+      F: Fn(&T) -> Result<(), FErr>,
+      FErr: Display
 {
     loop {
         match read(message) {
             Ok(value) => { 
-                if predicate(&value) {
-                    continue; 
-                } else {
-                    return value;
-                } 
+                match condition(&value) {
+                    Ok(_) => { return value; },
+                    Err(error) => { println!("ERROR: {error}. Please try again.") },
+                }
             },
             Err(error) => { println!("ERROR: {error}. Please try again.") },
         }

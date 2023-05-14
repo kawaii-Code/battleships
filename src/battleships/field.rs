@@ -1,4 +1,11 @@
+use std::fmt::Display;
+
 use super::ship::{Ship, Rotation};
+
+use crate::utilities::{
+    game_constants::{FIELD_SIZE, FIRST_LETTER, LAST_LETTER},
+    conversions
+};
 
 #[derive(Debug)]
 #[derive(Clone, Copy)]
@@ -151,8 +158,8 @@ impl PlayerField {
         self.at(x, y) == FieldCell::Ship
     }
 
-    pub fn place_ship(&mut self, ship: &Ship) -> bool {
-        debug_assert!(self.can_place(ship));
+    pub fn place_ship(&mut self, ship: &Ship) {
+        debug_assert!(self.can_place(ship).is_ok());
 
         match ship.rotation {
             Rotation::Horizontal => for i in 0..ship.length {
@@ -162,30 +169,31 @@ impl PlayerField {
                 self.field[ship.x][ship.y + i] = FieldCell::Ship 
             },    
         }
-
-        true
     }
 
-    pub fn can_place(&self, ship: &Ship) -> bool {
+    pub fn can_place(&self, ship: &Ship) -> Result<(), ShipPlacementError> {
         match ship.rotation {
             Rotation::Horizontal => for i in 0..ship.length {
-                if !self.can_place_on(ship.x + i, ship.y) {
-                    return false;
+                if let Err(error) = self.can_place_on(ship.x + i, ship.y) {
+                    return Err(error);
                 }
             },
             Rotation::Vertical => for i in 0..ship.length { 
-                if !self.can_place_on(ship.x, ship.y + i) {
-                    return false;
+                if let Err(error) = self.can_place_on(ship.x, ship.y + i) {
+                    return Err(error);
                 }
             },    
         }
 
-        true
+        Ok(())
     }
 
-    fn can_place_on(&self, x: usize, y: usize) -> bool {
-        if self.is_out_of_bounds(x as isize, y as isize) {
-            return false;
+    fn can_place_on(&self, x: usize, y: usize) -> Result<(), ShipPlacementError> {
+        if self.out_of_bounds(x) {
+            return Err(ShipPlacementError::OutOfBoundsX);
+        }
+        if self.out_of_bounds(y) {
+            return Err(ShipPlacementError::OutOfBoundsY);
         }
 
         for dy in -1..=1isize {
@@ -203,12 +211,16 @@ impl PlayerField {
                 };
 
                 if self.is_ship_on(checked_x, checked_y) {
-                    return false;
+                    return Err(ShipPlacementError::TouchesWithShip(checked_x, checked_y));
                 }
             }
         }
 
-        true
+        Ok(())
+    }
+
+    fn out_of_bounds(&self, coordinate: usize) -> bool {
+        coordinate >= self.size
     }
 
     fn is_out_of_bounds(&self, x: isize, y: isize) -> bool {
@@ -222,5 +234,27 @@ fn sub_one(coordinate: usize) -> Option<usize> {
 }
 fn add_one(coordinate: usize, bounds: usize) -> Option<usize> {
     if coordinate == bounds - 1 { None } else { Some(coordinate + 1) }
+}
+
+pub enum ShipPlacementError {
+    OutOfBoundsX,
+    OutOfBoundsY,
+    TouchesWithShip(usize, usize),
+    NoShipsOfLengthLeft(usize),
+}
+
+impl Display for ShipPlacementError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ShipPlacementError::OutOfBoundsX => write!(f, "x was out of bounds! Should be in range 0..{FIELD_SIZE}"),
+            ShipPlacementError::OutOfBoundsY => write!(f, "y was out of bounds! Should be in range {FIRST_LETTER}..{LAST_LETTER}"),
+            ShipPlacementError::NoShipsOfLengthLeft(length) => write!(f, "no ships of length {length} left"),
+            ShipPlacementError::TouchesWithShip(other_x, other_y) => {
+                let other_x = other_x + 1;
+                let other_y = conversions::usize_to_coordinate(*other_y);
+                write!(f, "collision with another ship at {other_y}{other_x}")
+            },
+        }
+    }
 }
 

@@ -1,6 +1,7 @@
 use std::{fmt::Display, str::FromStr, num::ParseIntError, char::ParseCharError};
 
-use crate::utilities::conversions::{self, CoordinateConversionError};
+use crate::utilities::game_constants::{FIRST_LETTER, LAST_LETTER};
+use crate::utilities::conversions;
 
 pub struct Shot { 
     pub x: usize,
@@ -22,8 +23,8 @@ impl FromStr for Shot {
             Err(error) => return Err(ParseShotError::ParseCharError(error)),
         };
         let y = match conversions::coordinate_to_usize(y) {
-            Ok(value) => value,
-            Err(error) => return Err(ParseShotError::ConversionError(error)),
+            Some(value) => value,
+            None => return Err(ParseShotError::ConversionError),
         };
 
         let x = match data.next() {
@@ -34,6 +35,7 @@ impl FromStr for Shot {
             Ok(value) => value,
             Err(error) => return Err(ParseShotError::ParseIntError(error)),
         };
+        let x = x - 1;
 
         Ok(Shot { x, y })
     }
@@ -43,7 +45,7 @@ pub enum ParseShotError {
     MissingInfo,
     ParseIntError(ParseIntError),
     ParseCharError(ParseCharError),
-    ConversionError(CoordinateConversionError),
+    ConversionError,
 }
 
 impl Display for ParseShotError {
@@ -52,7 +54,7 @@ impl Display for ParseShotError {
             ParseShotError::MissingInfo => write!(f, "missing some info about the shot. Maybe you forgot a ':'?"),
             ParseShotError::ParseIntError(inner) => write!(f, "can't understand the x coordinate: {inner}"),
             ParseShotError::ParseCharError(inner) => write!(f, "can't understand the y coordinate: {inner}"),
-            ParseShotError::ConversionError(inner) => write!(f, "the y coordinate is invalid: {inner}"),
+            ParseShotError::ConversionError => write!(f, "the y coordinate is invalid: coordinate must be in range: {FIRST_LETTER}..{LAST_LETTER}"),
         }
     }
 }

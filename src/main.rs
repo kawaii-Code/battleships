@@ -7,13 +7,13 @@ use battleships::{
     player::{Player, Victory},
     ship::{Ship, Rotation},
     shot::Shot,
+    field::ShipPlacementError,
 };
 
 use utilities::{
     input,
     game_constants::{SHIP_COUNT, FIELD_SIZE},
 };
-
 
 fn main() {
     let mut player = Player::new(FIELD_SIZE);
@@ -31,7 +31,15 @@ fn main() {
         player.print();
 
         let ship: Ship = input::read_while("Input a ship 'length:y:x:rotation': ", |ship| {
-            !player.can_place(ship) || ships_left.get(&ship.length).unwrap_or(&0) == &0
+            if let Err(error) = player.can_place(ship) {
+                return Err(error);
+            }
+
+            if ships_left.get(&ship.length).unwrap_or(&0) == &0 {
+                return Err(ShipPlacementError::NoShipsOfLengthLeft(ship.length));
+            }
+
+            Ok(())
         });
 
         *ships_left.get_mut(&ship.length).expect("This shouldn't happen") -= 1;
