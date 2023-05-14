@@ -1,144 +1,45 @@
 mod battleships;
+mod utilities;
 
-use std::{io, collections::HashMap, str::FromStr};
+use std::collections::HashMap;
+
 use battleships::{
     player::{Player, Victory},
     ship::{Ship, Rotation},
+    shot::Shot,
 };
 
-fn input(message: &str) -> String {
-    println!("{message}");
+use utilities::{
+    input,
+    game_constants::{SHIP_COUNT, FIELD_SIZE},
+};
 
-    let mut buf = String::new();
-    match io::stdin().read_line(&mut buf) {
-        Ok(_) => buf.trim().to_owned(),
-        Err(e) => { 
-            println!("{e}");
-            String::new()
-        }
-    }
-}
-
-fn input_rotation(message: &str) -> Result<Rotation, String> {
-    let input = input(message);
-
-    match input.as_str().trim() {
-        "h" => Ok(Rotation::Horizontal),
-        "v" => Ok(Rotation::Vertical),
-        _ => Err("Please input only the character 'h' or 'v'!".to_string()),
-    }
-}
-
-fn to_index(letter: &str) -> Result<usize, String> {
-    match letter.chars().next() {
-        Some(coordinate) => {
-            let ord = coordinate as usize;
-            if ord < 'A' as usize {
-                return Err("The y coordinate must be a letter!".to_string());
-            } else if ord > LAST_LETTER as usize {
-                return Err("The y coordinate was greater than possible: max is {LAST_LETTER}".to_string());
-            }
-
-            Ok(ord - 'A' as usize)
-        }
-        None => Err("No y coordinate provided!".to_string()),
-    }
-}
-
-fn input_ship() -> Result<Ship, String> {
-    let ship = input("Input a ship 'length:x:y': ");
-    let mut ship_iter = ship.split(':');
-
-    let length = match ship_iter.next() {
-        Some(value) => value,
-        None => return Err("Nothing was inputted!".to_string()),
-    };
-    let length = match length.parse::<usize>() {
-        Ok(value) => value,
-        Err(error) => return Err(error.to_string()),
-    };
-
-    let x = match ship_iter.next() {
-        Some(value) => value,
-        None => return Err("Expected a colon after length!".to_string()),
-    };
-    let x = match x.parse::<usize>() {
-        Ok(value) => value - 1,
-        Err(error) => return Err(error.to_string()),
-    };
-
-    let y = match ship_iter.next() {
-        Some(value) => value,
-        None => return Err("Expected a colon after x!".to_string()),
-    };
-    let y = match to_index(y) {
-        Ok(value) => value,
-        Err(message) => return Err(message),
-    };
-
-    let rotation = match input_rotation("Input a rotation (v/h): ") {
-        Ok(rotation) => rotation,
-        Err(message) => return Err(message),
-    };
-
-    Ok(Ship { 
-        length, x, y, rotation
-    })
-}
-
-const FIELD_SIZE: usize = 10;
-const SHIP_COUNT: u32 = 10;
-const LAST_LETTER: char = ('A' as usize + FIELD_SIZE) as u8 as char;
 
 fn main() {
     let mut player = Player::new(FIELD_SIZE);
 
-    let mut ships_to_place = HashMap::new();
-    ships_to_place.insert(4usize, 1);
-    ships_to_place.insert(3, 2);
-    ships_to_place.insert(2, 3);
-    ships_to_place.insert(1, 4);
+    let mut ships_left = HashMap::new();
+    ships_left.insert(4usize, 1);
+    ships_left.insert(3, 2);
+    ships_left.insert(2, 3);
+    ships_left.insert(1, 4);
 
-    println!("Please input {SHIP_COUNT} ships in format 'length:x:y', e.g. '4:3:B': ");
-
+    println!("Please input {} ships: ", SHIP_COUNT);
     for _ in 0..SHIP_COUNT {
-        loop {
-            player.print();
+        // To clear the screen: 
+        // print!("\x1B[2J\x1B[1;1H");
+        player.print();
 
-            let ship = match input_ship() {
-                Ok(ship) => ship,
-                Err(message) => {
-                    eprintln!("{message}");
-                    continue;
-                }
-            };
+        let ship: Ship = input::read_while("Input a ship 'length:y:x:rotation': ", |ship| {
+            !player.can_place(ship) || ships_left.get(&ship.length).unwrap_or(&0) == &0
+        });
 
-            if !player.can_place(&ship) {
-                eprintln!("Invalid ship placement! Try again.");
-                continue;
-            }
+        *ships_left.get_mut(&ship.length).expect("This shouldn't happen") -= 1;
 
-            match ships_to_place.get_mut(&ship.length) {
-                Some(ships_left) => {
-                    if *ships_left == 0 {
-                        eprintln!("Can't place any more ships of length {}!", ship.length);
-                        continue;
-                    } else {
-                        *ships_left -= 1;
-                    }
-                }
-                None => {
-                    eprintln!("Length {} is not available!", ship.length);
-                    continue;
-                }
-            }
-
-            player.place_ship(&ship);
-            break;
-        }
+        player.place_ship(&ship);
     }
 
-    println!("Your ship placement!");
+    println!("Your ship placement:");
     player.print();
 
     let mut opponent = Player::new(FIELD_SIZE);
@@ -159,14 +60,11 @@ fn main() {
     for ship in opponent_ships {
         opponent.place_ship(&ship);
     }
-
+    
     loop {
-        let shot = input("Input a shot in format 'x:y'");
-        let mut shot = shot.split(':');
-        let x = shot.next().unwrap().parse::<usize>().unwrap() - 1;
-        let y = to_index(shot.next().unwrap()).unwrap();
+        let shot = input::read_safe::<Shot>("Input a shot 'x:y'");
 
-        match player.shoot(&mut opponent, x, y) {
+        match player.shoot(&mut opponent, shot.x, shot.y) {
             Ok(victory) => {
                 match victory {
                     Victory::Win => {

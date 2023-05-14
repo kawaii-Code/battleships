@@ -184,6 +184,10 @@ impl PlayerField {
     }
 
     fn can_place_on(&self, x: usize, y: usize) -> bool {
+        if self.is_out_of_bounds(x as isize, y as isize) {
+            return false;
+        }
+
         for dy in -1..=1isize {
             for dx in -1..=1isize {
                 let checked_x = if dx == -1 { sub_one(x) } else if dx == 0 { Some(x) } else { add_one(x, self.size) };
