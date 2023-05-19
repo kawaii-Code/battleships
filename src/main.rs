@@ -15,19 +15,21 @@ use utilities::{
     game_constants::{SHIP_COUNT, FIELD_SIZE},
 };
 
+fn clear_screen() {
+    print!("\x1B[2J\x1B[1;1H");
+}
+
 fn main() {
     let mut player = Player::new(FIELD_SIZE);
-
+    
     let mut ships_left = HashMap::new();
     ships_left.insert(4usize, 1);
     ships_left.insert(3, 2);
     ships_left.insert(2, 3);
     ships_left.insert(1, 4);
 
-    println!("Please input {} ships: ", SHIP_COUNT);
     for _ in 0..SHIP_COUNT {
-        // To clear the screen: 
-        // print!("\x1B[2J\x1B[1;1H");
+        clear_screen();
         player.print();
 
         let ship: Ship = input::read_while("Input a ship 'length:y:x:rotation': ", |ship| {
@@ -69,14 +71,19 @@ fn main() {
         opponent.place_ship(&ship);
     }
     
+    let mut opponent_shot_y = 0;
+    let mut opponent_shot_x = 0;
     loop {
-        let shot = input::read_safe::<Shot>("Input a shot 'x:y'");
+        clear_screen();
+        player.print();
+        let shot = input::read_safe::<Shot>("Input a shot 'y:x'");
 
         match player.shoot(&mut opponent, shot.x, shot.y) {
             Ok(victory) => {
                 match victory {
                     Victory::Win => {
-                        println!("You won!!!");
+                        clear_screen();
+                        println!("You won!");
                         break;
                     }
                     Victory::NotWin => {
@@ -89,9 +96,27 @@ fn main() {
             }
         }
 
-        player.print();
+        match opponent.shoot(&mut player, opponent_shot_x, opponent_shot_y) {
+            Ok(Victory::Win) => { 
+                clear_screen();
+                println!("You lost :(");
+                break;
+            },
+            Ok(Victory::NotWin) => { }
+            Err(message) => {
+                panic!("Opponent shot in an invalid place: {message}");
+            }
+        }
+        opponent_shot_y += 1;
+        if opponent_shot_y >= FIELD_SIZE {
+            opponent_shot_x += 1;
+            opponent_shot_y = 0;
+        }
     }
 
     println!("Final game state: ");
+    println!("Your field: ");
     player.print();
+    println!("Enemy field: ");
+    opponent.print();
 }
