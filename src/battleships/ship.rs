@@ -1,6 +1,6 @@
 use std::{str::FromStr, num::ParseIntError, fmt::Display, char::ParseCharError};
 use crate::utilities::conversions;
-use crate::utilities::game_constants::{FIRST_LETTER, LAST_LETTER};
+use super::game_constants::{FIRST_LETTER, LAST_LETTER};
 
 #[derive(Debug)]
 #[derive(Clone, Copy)]

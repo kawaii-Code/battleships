@@ -1,4 +1,4 @@
-use super::game_constants::{FIRST_LETTER, LAST_LETTER};
+use crate::battleships::game_constants::{FIRST_LETTER, LAST_LETTER};
 
 pub fn coordinate_to_usize(character: char) -> Option<usize> {
     let character = character as usize;

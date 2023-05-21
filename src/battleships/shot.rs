@@ -1,6 +1,6 @@
 use std::{fmt::Display, str::FromStr, num::ParseIntError, char::ParseCharError};
 
-use crate::utilities::game_constants::{FIRST_LETTER, LAST_LETTER};
+use super::game_constants::{FIRST_LETTER, LAST_LETTER};
 use crate::utilities::conversions;
 
 pub struct Shot { 

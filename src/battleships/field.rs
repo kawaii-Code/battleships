@@ -1,9 +1,9 @@
 use std::fmt::Display;
 
 use super::ship::{Ship, Rotation};
+use super::game_constants::{FIELD_SIZE, FIRST_LETTER, LAST_LETTER};
 
 use crate::utilities::{
-    game_constants::{FIELD_SIZE, FIRST_LETTER, LAST_LETTER},
     conversions
 };
 

@@ -1,19 +1,15 @@
 mod battleships;
 mod utilities;
-
-use std::collections::HashMap;
+mod gameplay;
 
 use battleships::{
     player::{Player, Victory},
     ship::{Ship, Rotation},
     shot::Shot,
-    field::ShipPlacementError,
+    game_constants::FIELD_SIZE,
 };
 
-use utilities::{
-    input,
-    game_constants::{SHIP_COUNT, FIELD_SIZE},
-};
+use utilities::input;
 
 fn clear_screen() {
     print!("\x1B[2J\x1B[1;1H");
@@ -22,35 +18,7 @@ fn clear_screen() {
 fn main() {
     let mut player = Player::new(FIELD_SIZE);
     
-    let mut ships_left = HashMap::new();
-    ships_left.insert(4usize, 1);
-    ships_left.insert(3, 2);
-    ships_left.insert(2, 3);
-    ships_left.insert(1, 4);
-
-    for _ in 0..SHIP_COUNT {
-        clear_screen();
-        player.print();
-
-        let ship: Ship = input::read_while("Input a ship 'length:y:x:rotation': ", |ship| {
-            if let Err(error) = player.can_place(ship) {
-                return Err(error);
-            }
-
-            if ships_left.get(&ship.length).unwrap_or(&0) == &0 {
-                return Err(ShipPlacementError::NoShipsOfLengthLeft(ship.length));
-            }
-
-            Ok(())
-        });
-
-        *ships_left.get_mut(&ship.length).expect("This shouldn't happen") -= 1;
-
-        player.place_ship(&ship);
-    }
-
-    println!("Your ship placement:");
-    player.print();
+    gameplay::place_ships(&mut player);
 
     let mut opponent = Player::new(FIELD_SIZE);
 
